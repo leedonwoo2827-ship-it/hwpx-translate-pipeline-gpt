@@ -245,6 +245,15 @@ def main():
         i = argv.index("--run"); run = argv[i + 1]; del argv[i:i + 2]
     if "--book" in argv:
         i = argv.index("--book"); book = argv[i + 1]; del argv[i:i + 2]
+    # 원본 PDF 확인(없으면 빈 런을 만들지 않고 안내 후 종료)
+    if not os.path.exists(PDF):
+        print("원본 PDF가 없습니다. 아래 위치에 파일을 넣고 다시 실행하세요:")
+        print(f"    {PDF}")
+        print("  · 폴더(_asstest)는 저작권·대용량이라 리포에 포함되지 않습니다(직접 준비).")
+        print("  · 전체 책(192p)을 넣으면 메뉴 1)이 모든 장을 추출합니다.")
+        print("    특정 장만: python run.py extract <chapter-id>  (예: 156-161-11-ai-native-bangladesh)")
+        print(f"  · 사용 가능한 chapter-id: {list(CHAPTERS)}")
+        raise SystemExit(1)
     # extract 는 기본적으로 새 런 생성(--run 지정 시 해당 런에 추가)
     run_dir = paths.resolve_run(run, create=True, book=book)
     out_root = paths.stage(run_dir, paths.EXTRACT)
