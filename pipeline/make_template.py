@@ -3,7 +3,10 @@ assets/hwpx_template.hwpx 를 만든다. 이 결과물이 '양식 정본'이며,
 한컴에서 직접 더 손봐도 된다(그 경우 이 스크립트를 다시 돌릴 필요 없음).
 
 적용 보정:
-  - 본문(제목 paraPr) 첫 줄 들여쓰기(intent) = 한 글자 폭
+  - 본문 첫 줄 들여쓰기(intent) = 한 글자 폭
+  - 서체: 본문류=바탕체 Light(가장 얇음), 제목류=돋움체
+  - 줄간격: 본문류 180%(160% 기본보다 여유)
+  - 본문류 글자크기 -0.5pt
 사용:
     python pipeline/make_template.py
 """
@@ -30,8 +33,17 @@ HC = "http://www.hancom.co.kr/hwpml/2011/core"
 FIRST_LINE_INDENT = 1000          # 본문 첫 줄 들여쓰기(HWPUNIT, ≈한 글자)
 INDENT_STYLES = ("본문",)          # 들여쓰기를 적용할 명명 스타일
 
-# 서체(KoPub World, 한컴 face명). 본문=바탕체(명조), 제목=돋움체(고딕).
-BODY_FACE = "KoPubWorld바탕체 Medium"
+# 줄간격: 160%(빡빡) → 180%(적당한 여유). PERCENT 값. 더 넉넉히=200.
+LINE_SPACING = 180
+LINESPACING_STYLES = ("바탕글", "본문", "인용", "동그라미", "마이너스", "코드", "목록",
+                      "제목", "제목 1", "제목 2", "제목 3", "강조", "표본문", "표제목")
+
+# 본문류 글자크기 보정(HWPUNIT, 1pt=100). -50 = -0.5pt (얇은 Light 체와 함께 촘촘함 완화).
+BODY_SIZE_DELTA = -50
+SIZE_STYLES = ("바탕글", "본문", "인용", "동그라미", "마이너스", "표본문")
+
+# 서체(KoPub World, 한컴 face명). 본문=바탕체(명조, 가장 얇은 Light), 제목=돋움체(고딕).
+BODY_FACE = "KoPubWorld바탕체 Light"
 HEAD_FACE = "KoPubWorld돋움체 Medium"
 BODY_STYLES = ("바탕글", "본문", "인용", "동그라미", "마이너스", "코드", "표본문")
 HEAD_STYLES = ("제목", "제목 1", "제목 2", "제목 3", "강조", "표제목")
@@ -115,6 +127,30 @@ def apply_all(header_bytes: bytes) -> bytes:
     nh = _set_faces(root, head_pairs, HEAD_FACE)
     print(f"  서체: 본문류 face {nb}건 → {BODY_FACE}")
     print(f"  서체: 제목류 face {nh}건 → {HEAD_FACE}")
+
+    # 3) 줄간격: 지정 스타일의 lineSpacing(PERCENT) 설정
+    ls_target = _style_paraprefs(root, set(LINESPACING_STYLES))
+    n_ls = 0
+    for pp in root.iter(f"{{{HH}}}paraPr"):
+        if pp.get("id") in ls_target:
+            ls = pp.find(f"{{{HH}}}lineSpacing")
+            if ls is None:
+                ls = etree.SubElement(pp, f"{{{HH}}}lineSpacing")
+            ls.set("type", "PERCENT")
+            ls.set("value", str(LINE_SPACING))
+            ls.set("unit", "HWPUNIT")
+            n_ls += 1
+    print(f"  줄간격: paraPr {n_ls}건 → {LINE_SPACING}%")
+
+    # 4) 본문류 글자크기 보정(-0.5pt): 지정 스타일이 참조하는 charPr height 감소
+    sz_target = _charpr_ids(root, set(SIZE_STYLES))
+    n_sz = 0
+    for cp in root.iter(f"{{{HH}}}charPr"):
+        if cp.get("id") in sz_target and cp.get("height"):
+            new_h = max(100, int(cp.get("height")) + BODY_SIZE_DELTA)
+            cp.set("height", str(new_h))
+            n_sz += 1
+    print(f"  글자크기: charPr {n_sz}건 → {BODY_SIZE_DELTA/100:+.1f}pt")
 
     return etree.tostring(root, xml_declaration=True, encoding="UTF-8", standalone=True)
 
