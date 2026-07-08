@@ -78,19 +78,25 @@ async function renderIndex() {
   rows.forEach((r) => {
     const tr = document.createElement("tr");
     tr.innerHTML = `<td class="mono">${esc(r.id)}</td><td>${esc(r.title)}</td><td>${esc(r.author)}</td>`
-      + `<td><span class="tag">${esc(r.src)}</span></td><td>${r.proofs.map((p) => `<span class="tag">${esc(p)}</span>`).join(" ")}</td>`;
+      + `<td><span class="tag">${esc(r.src)}</span></td><td>${r.proofs.map((p) => `<span class="tag proof">${esc(p)}</span>`).join(" ")}</td>`;
     tr.addEventListener("click", () => openEditor(r.id));
     tb.appendChild(tr);
   });
   $("list-book").textContent = activeBook || "";
   setStatus(`교정 현황 · ${activeBook} · ${activeRun} · ${rows.length}개 장`);
 }
-function showList() { $("view-list").classList.remove("hidden"); $("view-editor").classList.add("hidden"); $("nav-list").classList.add("hidden"); $("editor-tools").classList.add("hidden"); renderIndex(); }
+function showList() {
+  $("view-list").classList.remove("hidden"); $("view-editor").classList.add("hidden");
+  $("nav-list").classList.add("hidden"); $("editor-tools").classList.add("hidden");
+  $("pdf-attach").classList.remove("hidden");   // PDF 첨부는 목록에서만
+  renderIndex();
+}
 
 // ---- 편집 화면 ----
 async function openEditor(cid) {
   $("view-list").classList.add("hidden"); $("view-editor").classList.remove("hidden");
   $("nav-list").classList.remove("hidden"); $("editor-tools").classList.remove("hidden");
+  $("pdf-attach").classList.add("hidden");
   await loadChapter(cid);
 }
 async function loadChapter(cid) {
@@ -155,7 +161,9 @@ async function pdfBuild() {
   finally { b.disabled = false; }
 }
 
-// ---- 새 원고(PDF) → 워크스페이스 생성 (첫 화면 드롭존) ----
+// ---- 새 원고(PDF) → 워크스페이스 생성 (＋PDF 첨부 모달) ----
+function openWs() { $("ws-msg").textContent = ""; $("ws-overlay").classList.remove("hidden"); $("ws-title").focus(); }
+function closeWs() { $("ws-overlay").classList.add("hidden"); }
 async function createWorkspace(file) {
   const title = ($("ws-title").value || "").trim();
   if (!title) { $("ws-msg").textContent = "책 제목을 먼저 입력하세요."; return; }
@@ -173,6 +181,7 @@ async function createWorkspace(file) {
     const bs = $("book");
     if ([...bs.options].some((o) => o.value === j.book)) bs.value = j.book;
     await loadRuns(); showList();
+    closeWs();
   } catch (e) { $("ws-msg").textContent = "실패: " + e; }
 }
 
@@ -259,6 +268,9 @@ $("ws-drop").addEventListener("drop", (e) => {
   e.preventDefault(); $("ws-drop").classList.remove("over");
   const f = e.dataTransfer.files[0]; if (f) createWorkspace(f);
 });
+$("pdf-attach").addEventListener("click", openWs);
+$("ws-close").addEventListener("click", closeWs);
+$("ws-overlay").addEventListener("click", (e) => { if (e.target === $("ws-overlay")) closeWs(); });
 
 $("llm-settings").addEventListener("click", openLlm);
 $("llm-close").addEventListener("click", closeLlm);

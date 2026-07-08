@@ -15,21 +15,22 @@
     <button id="llm-settings" class="btn ghost sm">⚙ 연결 상태</button>
   </div>
   <div class="toolbar">
-    <button id="nav-list" class="btn hidden">← 목록</button>
+    <button id="nav-list" class="btn sm hidden">← 목록</button>
     <label class="vlbl">책</label>
     <select id="book" class="vsel" title="책 선택"></select>
     <label class="vlbl">교지(런)</label>
     <select id="run" class="vsel" title="편집할 교지(런) 선택"></select>
+    <button id="pdf-attach" class="btn pill sm">＋ PDF 첨부</button>
     <span id="status" class="status"></span>
     <span class="spacer"></span>
     <span id="editor-tools" class="hidden">
-      <button id="gpt-translate" class="btn" title="영문 → 한국어 완역(02)">GPT 번역(02)</button>
-      <button id="gpt-refine" class="btn" title="초벌 → 자연스러운 윤문(03)">GPT 윤문(03)</button>
-      <button id="diff-toggle" class="btn">대비 보기</button>
-      <button id="preview-toggle" class="btn">프리뷰</button>
-      <button id="save" class="btn">교지 저장</button>
-      <button id="build" class="btn primary">hwpx 빌드</button>
-      <button id="pdf-build" class="btn hidden" title="빌드된 hwpx를 한컴으로 PDF 변환">PDF 빌드</button>
+      <button id="gpt-translate" class="btn pill sm" title="영문 → 한국어 완역(02)">GPT 번역(02)</button>
+      <button id="gpt-refine" class="btn pill sm" title="초벌 → 자연스러운 윤문(03)">GPT 윤문(03)</button>
+      <button id="diff-toggle" class="btn pill sm">대비 보기</button>
+      <button id="preview-toggle" class="btn pill sm">프리뷰</button>
+      <button id="save" class="btn pill sm">교지 저장</button>
+      <button id="build" class="btn primary pill sm">hwpx 빌드</button>
+      <button id="pdf-build" class="btn accent pill sm hidden" title="빌드된 hwpx를 한컴으로 PDF 변환">PDF 빌드</button>
     </span>
   </div>
 </header>
@@ -62,16 +63,29 @@
   </div>
 </div>
 
+<!-- 새 원고(PDF) 첨부 → 워크스페이스 생성 모달 -->
+<div id="ws-overlay" class="overlay hidden">
+  <div class="modal">
+    <h3>＋ 새 원고(PDF)로 워크스페이스 만들기</h3>
+    <p class="muted">PDF를 넣으면 새 책(워크스페이스)이 생성되고 본문이 추출됩니다. 이후 장을 열어 GPT 번역·윤문·빌드를 진행하세요.</p>
+    <div class="ws-body">
+      <div class="field">
+        <label>책 제목</label>
+        <input id="ws-title" type="text" placeholder="예: 2026-대학의미래">
+      </div>
+      <div id="ws-drop" class="ws-drop">여기에 PDF를 드래그하거나 클릭해 선택</div>
+      <input id="ws-file" type="file" accept="application/pdf" hidden>
+      <div id="ws-msg" class="hint"></div>
+    </div>
+    <div class="row" style="margin-top:16px">
+      <span class="spacer"></span>
+      <button id="ws-close" class="btn">닫기</button>
+    </div>
+  </div>
+</div>
+
 <!-- 첫 페이지: 교정 현황(목차) -->
 <main id="view-list">
-  <!-- 새 원고(PDF) 첨부 → 워크스페이스 생성 -->
-  <div class="ws-new">
-    <b>새 원고(PDF) → 워크스페이스</b>
-    <input id="ws-title" placeholder="책 제목 입력">
-    <div id="ws-drop" class="ws-drop">여기에 PDF를 드래그하거나 클릭해 선택</div>
-    <input id="ws-file" type="file" accept="application/pdf" hidden>
-    <span id="ws-msg" class="hint"></span>
-  </div>
   <div class="list-wrap">
     <h2 class="list-title">교정 현황 · <span id="list-book"></span> <span class="hint">(장을 클릭하면 편집 화면으로)</span></h2>
     <table class="idx">
