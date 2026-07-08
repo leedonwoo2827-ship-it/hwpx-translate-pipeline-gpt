@@ -184,6 +184,21 @@ def _launch_terminal(cmd: list[str]) -> bool:
         return False
 
 
+def _open_folder(folder: str) -> None:
+    """탐색기/파인더로 폴더 열기(빌드 후 결과 확인용). 실패해도 무시."""
+    try:
+        folder = os.path.abspath(folder)
+        sysname = platform.system()
+        if sysname == "Windows":
+            os.startfile(folder)  # noqa: S606
+        elif sysname == "Darwin":
+            subprocess.Popen(["open", folder])
+        else:
+            subprocess.Popen(["xdg-open", folder])
+    except Exception:
+        pass
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json; charset=utf-8"):
         if isinstance(body, (dict, list)):
@@ -291,7 +306,8 @@ class Handler(BaseHTTPRequestHandler):
             _save_reviewed(run_dir, cid, data.get("ko", ""))
             try:
                 import build
-                out = build.build(cid, run=run_dir)
+                # include_cover=False: 회사양식 표지(1페이지) 제외하고 본문만 빌드.
+                out = build.build(cid, run=run_dir, include_cover=False)
             except Exception as e:  # noqa: BLE001
                 return self._send(200, {"ok": False, "error": str(e)})
             # hwpx → PDF (한컴, Windows). 실패해도 hwpx 는 성공으로 반환.
@@ -299,6 +315,7 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 import hancom_pdf
                 pdf = hancom_pdf.to_pdf(out)
+                _open_folder(os.path.dirname(pdf))  # PDF 성공 시 그 폴더 열기
             except Exception as e:  # noqa: BLE001
                 pdf_error = str(e)
             return self._send(200, {"ok": True, "hwpx": out, "pdf": pdf, "pdf_error": pdf_error})
