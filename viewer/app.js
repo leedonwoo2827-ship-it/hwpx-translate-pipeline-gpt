@@ -136,7 +136,12 @@ async function save() {
 async function build() {
   setStatus("hwpx 빌드 중…");
   const r = await fetch("/api/build/" + encodeURIComponent(currentCid) + qy({ run: activeRun }), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ko: $("ko").value }) });
-  const j = await r.json(); setStatus(j.ok ? ("빌드 완료: " + j.hwpx) : ("빌드 실패: " + j.error));
+  const j = await r.json();
+  if (!j.ok) { setStatus("빌드 실패: " + j.error); return; }
+  let msg = "hwpx 빌드 완료";
+  if (j.pdf) msg += " + PDF 생성됨";
+  else if (j.pdf_error) msg += " (PDF 생략: 한컴 필요/오류)";
+  setStatus(msg + " → " + j.hwpx);
 }
 
 // ---- 새 원고(PDF) → 워크스페이스 생성 (첫 화면 드롭존) ----

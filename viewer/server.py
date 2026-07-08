@@ -292,9 +292,16 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 import build
                 out = build.build(cid, run=run_dir)
-                return self._send(200, {"ok": True, "hwpx": out})
             except Exception as e:  # noqa: BLE001
                 return self._send(200, {"ok": False, "error": str(e)})
+            # hwpx → PDF (한컴, Windows). 실패해도 hwpx 는 성공으로 반환.
+            pdf, pdf_error = None, None
+            try:
+                import hancom_pdf
+                pdf = hancom_pdf.to_pdf(out)
+            except Exception as e:  # noqa: BLE001
+                pdf_error = str(e)
+            return self._send(200, {"ok": True, "hwpx": out, "pdf": pdf, "pdf_error": pdf_error})
 
         # ── LLM(codex) 관리 ──
         if path == "/api/llm/model":
