@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>UNIVERSITIES AFTER AI — 번역 리뷰</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+<header>
+  <h1>UNIVERSITIES AFTER AI · 번역 리뷰</h1>
+  <div class="toolbar">
+    <button id="nav-list" class="btn hidden">← 목록</button>
+    <label class="vlbl">책</label>
+    <select id="book" class="vsel" title="책 선택"></select>
+    <label class="vlbl">교지(런)</label>
+    <select id="run" class="vsel" title="편집할 교지(런) 선택"></select>
+    <span id="status" class="status"></span>
+    <span class="spacer"></span>
+    <span id="editor-tools" class="hidden">
+      <button id="diff-toggle" class="btn">대비 보기</button>
+      <button id="preview-toggle" class="btn">프리뷰</button>
+      <button id="save" class="btn">교지 저장</button>
+      <button id="build" class="btn primary">hwpx 빌드</button>
+    </span>
+  </div>
+</header>
+
+<!-- 첫 페이지: 교정 현황(목차) -->
+<main id="view-list">
+  <div class="list-wrap">
+    <h2 class="list-title">교정 현황 · <span id="list-book"></span> <span class="hint">(장을 클릭하면 편집 화면으로)</span></h2>
+    <table class="idx">
+      <thead><tr><th>장</th><th>제목</th><th>저자</th><th>활성 단계</th><th>보유 교지</th></tr></thead>
+      <tbody id="idx-body"></tbody>
+    </table>
+  </div>
+</main>
+
+<!-- 편집 페이지: 좌(원문/교지) vs 우(편집) -->
+<main id="view-editor" class="hidden">
+  <section class="pane" id="left-pane">
+    <div class="pane-title">
+      좌측: <select id="left-src" class="vsel" title="원문 또는 교지 선택"></select>
+      <span id="ed-cid" class="hint"></span>
+    </div>
+    <div id="en" class="rendered"></div>
+  </section>
+  <section class="pane" id="right-pane">
+    <div class="pane-title">우측(편집) <span id="ko-mode" class="badge"></span></div>
+    <textarea id="ko" spellcheck="false" placeholder="한국어 마크다운"></textarea>
+    <div id="ko-preview" class="rendered hidden"></div>
+    <div id="ko-diff" class="rendered hidden"></div>
+  </section>
+</main>
+
+<script src="/app.js"></script>
+</body>
+</html>

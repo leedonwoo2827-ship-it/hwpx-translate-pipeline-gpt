@@ -1,0 +1,8 @@
+# UNIVERSITIES AFTER AI — 한국어 변환 파이프라인 (자기완결)
+# 런타임 핵심: PDF 추출 + hwpx 생성(lxml) + 이미지
+PyMuPDF>=1.24      # PDF 텍스트 추출 + 도표 크롭/렌더
+lxml>=5.1          # hwpx(OWPML) 파싱·생성
+Pillow>=10.0       # 도표 PNG 크기 측정
+
+# 선택: 한컴 OLE 검증 경로(Windows + 한컴오피스). 미설치여도 lxml 경로로 동작.
+pywin32>=306 ; platform_system == "Windows"

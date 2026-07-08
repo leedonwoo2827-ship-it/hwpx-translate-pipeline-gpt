@@ -1,0 +1,23 @@
+# 대용량 원본(저작권) 및 생성 산출물 — 리포에 올리지 않음
+_asstest/
+output/
+
+# 파이썬 캐시/가상환경
+__pycache__/
+*.pyc
+.venv/
+venv/
+env/
+
+# 개발 스파이크(임시)
+pipeline/_spike_*.py
+
+# LLM(codex) 로컬 상태 — 선택 모델 저장. 인증은 ~/.codex/auth.json(홈)에만 있어 리포 밖.
+data/codex_model.json
+
+# OS/에디터
+.DS_Store
+Thumbs.db
+*.swp
+.idea/
+.vscode/
