@@ -22,7 +22,7 @@ from .errors import (
 )
 from .codex_auth import CODEX_BIN, codex_path
 
-CODEX_TIMEOUT = int(os.environ.get("CODEX_EXEC_TIMEOUT", "300"))
+CODEX_TIMEOUT = int(os.environ.get("CODEX_EXEC_TIMEOUT", "1200"))  # 20분(큰 문서 대비). 필요시 환경변수로 조정
 CODEX_MODEL_ENV = os.environ.get("CODEX_MODEL", "").strip()
 _MODEL_FILE = Path(__file__).resolve().parents[2] / "data" / "codex_model.json"
 
