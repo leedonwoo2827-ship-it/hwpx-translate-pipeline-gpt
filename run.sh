@@ -27,17 +27,18 @@ menu() {
 ==============================================
   UNIVERSITIES AFTER AI  -  pipeline launcher
 ==============================================
-  1) Review viewer   (edit screen, browser)
-  2) Build all chapters -> 05-hwpx
-  3) Export PDFs (Hancom, Windows only)
-  4) Merge book -> 06-book
-  5) Extract from PDF (new run)
-  0) Quit
+  1) Extract from PDF               (-> 01-extract, new run)
+  2) Review viewer / GPT translate  (02-04, browser)
+  3) Build chapters                 (-> 05-hwpx)
+  4) Export PDFs (Hancom, Windows only)
+  5) Merge book                     (-> 06-book)
+  6) Quit
 EOF
   read -rp "Select: " sel
   case "$sel" in
-    1) open_url "http://127.0.0.1:8770"; "$PY" run.py viewer ;;
-    2)
+    1) "$PY" run.py extract ;;
+    2) open_url "http://127.0.0.1:8770"; "$PY" run.py viewer ;;
+    3)
        RUN="$(latest_run)"
        echo "Run: ${RUN:-<none>}"
        if [ -n "$RUN" ]; then
@@ -48,10 +49,9 @@ EOF
          done
        fi
        ;;
-    3) "$PY" run.py pdf-batch ;;
-    4) "$PY" run.py merge ;;
-    5) "$PY" run.py extract ;;
-    0) exit 0 ;;
+    4) "$PY" run.py pdf-batch ;;
+    5) "$PY" run.py merge ;;
+    6) exit 0 ;;
     *) echo "Invalid choice." ;;
   esac
 }

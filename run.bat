@@ -8,21 +8,21 @@ echo.
 echo ==============================================
 echo   UNIVERSITIES AFTER AI  -  pipeline launcher
 echo ==============================================
-echo   1) Review viewer   (edit screen, browser)
-echo   2) Build all chapters -^> 05-hwpx
-echo   3) Export PDFs (Hancom) -^> 05-hwpx
-echo   4) Merge book -^> 06-book
-echo   5) Extract from PDF (new run)
-echo   0) Quit
+echo   1) Extract from PDF               (-^> 01-extract, new run)
+echo   2) Review viewer / GPT translate  (02-04, browser)
+echo   3) Build chapters                 (-^> 05-hwpx)
+echo   4) Export PDFs (Hancom)           (-^> PDF)
+echo   5) Merge book                     (-^> 06-book)
+echo   6) Quit
 echo.
 set /p sel="Select: "
 
-if "%sel%"=="1" goto viewer
-if "%sel%"=="2" goto build
-if "%sel%"=="3" goto pdf
-if "%sel%"=="4" goto merge
-if "%sel%"=="5" goto extract
-if "%sel%"=="0" goto end
+if "%sel%"=="1" goto extract
+if "%sel%"=="2" goto viewer
+if "%sel%"=="3" goto build
+if "%sel%"=="4" goto pdf
+if "%sel%"=="5" goto merge
+if "%sel%"=="6" goto end
 echo Invalid choice.
 goto menu
 
@@ -33,9 +33,10 @@ python run.py viewer
 goto menu
 
 :build
-for /f "delims=" %%D in ('python -c "import sys;sys.path.insert(0,'pipeline');import os,paths;print(os.path.basename(paths.latest_run()))"') do set RUN=%%D
+for /f "delims=" %%D in ('python -c "import sys;sys.path.insert(0,'pipeline');import paths;print(paths.latest_run() or '')"') do set "RUN=%%D"
+if "%RUN%"=="" ( echo No run found. Run Extract first. & goto menu )
 echo Run: %RUN%
-for /f "delims=" %%C in ('dir /b "output\%RUN%\02-translate"') do python run.py build %%C --run "%RUN%"
+for /f "delims=" %%C in ('dir /b "%RUN%\02-translate" 2^>nul') do python run.py build %%C --run "%RUN%"
 goto menu
 
 :pdf
