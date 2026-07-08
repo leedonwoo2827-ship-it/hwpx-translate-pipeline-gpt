@@ -27,18 +27,28 @@ menu() {
 ==============================================
   UNIVERSITIES AFTER AI  -  pipeline launcher
 ==============================================
-  1) Extract from PDF               (-> 01-extract, new run)
-  2) Review viewer / GPT translate  (02-04, browser)
-  3) Build chapters                 (-> 05-hwpx)
-  4) Export PDFs (Hancom, Windows only)
-  5) Merge book                     (-> 06-book)
-  6) Quit
+  1) New workspace from PDF         (title 입력 -> 워크스페이스 + 통째 추출)
+  2) Extract THIS book (192p)       (-> 01-extract, 장별)
+  3) Review viewer / GPT translate  (02-04, browser)
+  4) Build chapters                 (-> 05-hwpx)
+  5) Export PDFs (Hancom, Windows only)
+  6) Merge book                     (-> 06-book)
+  7) Quit
 EOF
   read -rp "Select: " sel
   case "$sel" in
-    1) "$PY" run.py extract ;;
-    2) open_url "http://127.0.0.1:8770"; "$PY" run.py viewer ;;
-    3)
+    1)
+       read -rp "Book title (workspace name): " title
+       [ -z "$title" ] && { echo "Title required."; return; }
+       read -rp "PDF path: " pdfpath
+       pdfpath="${pdfpath%\"}"; pdfpath="${pdfpath#\"}"   # strip quotes
+       [ -z "$pdfpath" ] && { echo "PDF path required."; return; }
+       "$PY" run.py extract --pdf "$pdfpath" --whole --book "$title"
+       echo "Done. Open 'Review viewer' (3) to translate/edit."
+       ;;
+    2) "$PY" run.py extract ;;
+    3) open_url "http://127.0.0.1:8770"; "$PY" run.py viewer ;;
+    4)
        RUN="$(latest_run)"
        echo "Run: ${RUN:-<none>}"
        if [ -n "$RUN" ]; then
@@ -49,9 +59,9 @@ EOF
          done
        fi
        ;;
-    4) "$PY" run.py pdf-batch ;;
-    5) "$PY" run.py merge ;;
-    6) exit 0 ;;
+    5) "$PY" run.py pdf-batch ;;
+    6) "$PY" run.py merge ;;
+    7) exit 0 ;;
     *) echo "Invalid choice." ;;
   esac
 }

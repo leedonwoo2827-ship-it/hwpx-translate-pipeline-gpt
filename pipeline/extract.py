@@ -237,29 +237,53 @@ def extract_chapter(cid: str, meta: dict, doc, out_root: str) -> None:
     print(f"[{cid}] pages {p0}-{p1} | figures={len(figures)} | md={len(body)} chars → {out_dir}")
 
 
+def _slugify(text: str) -> str:
+    """책/장 제목 → 폴더용 슬러그(영숫자·한글 유지, 공백·기호는 하이픈)."""
+    s = re.sub(r"\s+", "-", (text or "").strip())
+    s = re.sub(r"[^\w\-]+", "", s, flags=re.UNICODE).strip("-")
+    return s[:40] or "doc"
+
+
 def main():
     argv = sys.argv[1:]
     run = None
     book = None
+    pdf = PDF
+    whole = False
+    if "--pdf" in argv:
+        i = argv.index("--pdf"); pdf = argv[i + 1]; del argv[i:i + 2]
+    if "--whole" in argv:
+        i = argv.index("--whole"); whole = True; del argv[i:i + 1]
     if "--run" in argv:
         i = argv.index("--run"); run = argv[i + 1]; del argv[i:i + 2]
     if "--book" in argv:
         i = argv.index("--book"); book = argv[i + 1]; del argv[i:i + 2]
     # 원본 PDF 확인(없으면 빈 런을 만들지 않고 안내 후 종료)
-    if not os.path.exists(PDF):
-        print("원본 PDF가 없습니다. 아래 위치에 파일을 넣고 다시 실행하세요:")
-        print(f"    {PDF}")
-        print("  · 폴더(_asstest)는 저작권·대용량이라 리포에 포함되지 않습니다(직접 준비).")
-        print("  · 전체 책(192p)을 넣으면 메뉴 1)이 모든 장을 추출합니다.")
-        print("    특정 장만: python run.py extract <chapter-id>  (예: 156-161-11-ai-native-bangladesh)")
-        print(f"  · 사용 가능한 chapter-id: {list(CHAPTERS)}")
+    if not os.path.exists(pdf):
+        print("원본 PDF가 없습니다. 파일을 넣고 다시 실행하세요:")
+        print(f"    {pdf}")
+        print("  · 워크스페이스(새 책): python run.py extract --pdf \"<pdf경로>\" --whole --book \"<책제목>\"")
+        print("    → PDF 전체를 한 장으로 추출해 새 워크스페이스를 만듭니다.")
+        if pdf == PDF:
+            print("  · 이 책(192p) 전용 장 추출: python run.py extract <chapter-id>")
+            print(f"    사용 가능한 chapter-id: {list(CHAPTERS)}")
         raise SystemExit(1)
     # extract 는 기본적으로 새 런 생성(--run 지정 시 해당 런에 추가)
     run_dir = paths.resolve_run(run, create=True, book=book)
     out_root = paths.stage(run_dir, paths.EXTRACT)
     os.makedirs(out_root, exist_ok=True)
-    print(f"[run] {os.path.basename(run_dir)}")
-    doc = fitz.open(PDF)
+    print(f"[run] {os.path.basename(run_dir)} (book={os.path.basename(os.path.dirname(run_dir))})")
+    doc = fitz.open(pdf)
+
+    # --whole: PDF 전체를 한 장으로 추출(임의 책의 워크스페이스 시작점). 장 분할은 이후 단계.
+    if whole:
+        n = doc.page_count
+        title = book or os.path.splitext(os.path.basename(pdf))[0]
+        cid = f"001-{n:03d}-00-{_slugify(title)}"
+        extract_chapter(cid, {"title": title, "author": "", "pages": (1, n)}, doc, out_root)
+        print(f"[whole] '{title}' {n}쪽 → 1개 장({cid}) 추출 완료. 뷰어에서 확인하세요.")
+        return
+
     targets = argv or list(CHAPTERS.keys())
     for cid in targets:
         if cid not in CHAPTERS:
