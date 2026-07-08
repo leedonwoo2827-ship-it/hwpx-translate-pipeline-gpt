@@ -20,11 +20,12 @@ import os
 import re
 import sys
 
-# Windows 콘솔(cp949)에서도 한글/em-dash 출력이 깨지지 않도록 UTF-8 로 재래핑(build.py 와 동일).
-try:
-    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
-except Exception:
-    pass
+# CLI 실행 시에만 콘솔을 UTF-8 로(한글 출력). 서버 등에서 import 될 때는 stdout 을 건드리지 않음.
+if __name__ == "__main__":
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    except Exception:
+        pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)

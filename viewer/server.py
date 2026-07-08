@@ -21,10 +21,13 @@ ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "pipeline"))
 import paths  # noqa: E402
 import translate  # noqa: E402  (LLM 자동 번역/윤문)
+import extract  # noqa: E402  (PDF → 워크스페이스)
 from llm import codex_auth, codex_runner  # noqa: E402
 from llm.errors import (  # noqa: E402
     LLMNotInstalled, LLMNotAuthenticated, LLMQuotaExceeded, LLMError,
 )
+
+ASSTEST = os.path.join(ROOT, "_asstest")  # 업로드 PDF 저장 위치
 
 PORT = 8770
 _ARG_RUN = None
@@ -36,7 +39,11 @@ def _book(book=None):
 
 
 def _run_dir(run=None, book=None):
-    return paths.resolve_run(run or _ARG_RUN, book=_book(book))
+    """활성 런 경로. 워크스페이스(런)가 하나도 없으면 None(뷰어가 빈 화면으로 뜸)."""
+    try:
+        return paths.resolve_run(run or _ARG_RUN, book=_book(book))
+    except SystemExit:
+        return None
 
 
 def _read(path):
@@ -44,6 +51,8 @@ def _read(path):
 
 
 def _chapters(run_dir):
+    if not run_dir:
+        return []
     out = set()
     for st in (paths.TRANSLATE, paths.REFINE, paths.REVIEW, paths.EXTRACT):
         d = os.path.join(run_dir, st)
@@ -70,6 +79,8 @@ def _repr_md(run_name, cid, book=None):
 
 
 def _chapter_data(run_dir, cid):
+    if not run_dir:
+        return {"id": cid, "en": "", "latest": "", "src": "-", "active_run": "", "figures": []}
     en = _read(paths.stage(run_dir, paths.EXTRACT, cid, "content.en.md"))
     p, src = paths.source_md(run_dir, cid)
     latest = _read(p) if p else ""
@@ -196,8 +207,9 @@ class Handler(BaseHTTPRequestHandler):
         if path == "/api/books":
             return self._send(200, {"books": paths.books(), "active": _book(book)})
         if path == "/api/runs":
+            rd = _run_dir(run, book)
             return self._send(200, {"versions": _run_versions(book),
-                                    "active": os.path.basename(_run_dir(run, book)),
+                                    "active": os.path.basename(rd) if rd else "",
                                     "book": _book(book)})
         if path == "/api/chapters":
             return self._send(200, _chapters(_run_dir(run, book)))
@@ -210,8 +222,11 @@ class Handler(BaseHTTPRequestHandler):
             rn = q.get("v", [""])[0]  # 교지 런 이름
             return self._send(200, {"run": rn, "text": _repr_md(rn, cid, book)})
         if path.startswith("/figures/"):
+            rd = _run_dir(run, book)
+            if not rd:
+                return self._send(404, {"error": "no workspace"})
             cid, _, fname = path[len("/figures/"):].partition("/")
-            fpath = paths.stage(_run_dir(run, book), paths.EXTRACT, cid, "figures", fname)
+            fpath = paths.stage(rd, paths.EXTRACT, cid, "figures", fname)
             if os.path.exists(fpath):
                 return self._send(200, open(fpath, "rb").read(), "image/png")
             return self._send(404, {"error": "no figure"})
@@ -230,6 +245,25 @@ class Handler(BaseHTTPRequestHandler):
         except Exception:
             data = {}
         run_dir = _run_dir(run, book)
+
+        # ── PDF 업로드 → 새 워크스페이스(책) 생성 (첫 화면 드롭존) ──
+        # 본문(raw)=PDF 바이트, ?title=<책제목>. PDF 전체를 1개 장으로 추출.
+        if path == "/api/workspace":
+            title = (q.get("title", [""])[0] or "").strip()
+            if not title:
+                return self._send(200, {"ok": False, "error": "제목을 입력하세요."})
+            if not raw:
+                return self._send(200, {"ok": False, "error": "PDF 파일이 비어 있습니다."})
+            try:
+                os.makedirs(ASSTEST, exist_ok=True)
+                pdf_path = os.path.join(ASSTEST, extract._slugify(title) + ".pdf")
+                with open(pdf_path, "wb") as f:
+                    f.write(raw)
+                rd, cid = extract.extract_whole(pdf_path, book=title)
+                return self._send(200, {"ok": True, "book": title,
+                                        "run": os.path.basename(rd), "cid": cid})
+            except Exception as e:  # noqa: BLE001
+                return self._send(200, {"ok": False, "error": str(e)})
 
         if path.startswith("/api/save/"):
             cid = path[len("/api/save/"):]
@@ -284,8 +318,12 @@ def main():
     if "--book" in sys.argv:
         _ARG_BOOK = sys.argv[sys.argv.index("--book") + 1]
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), Handler)
-    print(f"리뷰 뷰어: http://127.0.0.1:{PORT}  "
-          f"(책: {_book()}, 런: {os.path.basename(_run_dir())}, Ctrl+C 종료)")
+    try:
+        rd = _run_dir()
+        where = os.path.basename(rd) if rd else "no workspace yet - drop a PDF on the first page"
+        print(f"viewer: http://127.0.0.1:{PORT}  ({where}, Ctrl+C to quit)", flush=True)
+    except Exception:
+        pass
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

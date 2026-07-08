@@ -50,6 +50,15 @@ select {
 
 main { flex: 1; display: flex; gap: 10px; padding: 10px; min-height: 0; }
 #view-list { display: block; overflow-y: auto; }
+
+/* 새 원고(PDF) → 워크스페이스 (기능용 최소 스타일; 디자인은 추후) */
+.ws-new { max-width: 1000px; margin: 0 auto 10px; background: #fff; border: 1px solid #dfe4ea;
+  border-radius: 8px; padding: 12px 16px; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.ws-new > b { color: #1f3a5f; font-size: 13px; white-space: nowrap; }
+#ws-title { padding: 6px 10px; border: 1px solid #cbd2da; border-radius: 6px; font-size: 13px; min-width: 200px; }
+.ws-drop { flex: 1; min-width: 220px; border: 2px dashed #b9c4d0; border-radius: 8px; padding: 12px;
+  text-align: center; color: #66707a; font-size: 13px; cursor: pointer; }
+.ws-drop.over { border-color: #2b6cb0; background: #f2f7fc; color: #2b6cb0; }
 .list-wrap { max-width: 1000px; margin: 0 auto; background: #fff; border: 1px solid #dfe4ea; border-radius: 8px; padding: 20px 24px; }
 .list-title { font-size: 18px; margin: 0 0 16px; color: #1f3a5f; }
 table.idx { width: 100%; border-collapse: collapse; font-size: 13px; }

@@ -16,7 +16,12 @@ import re
 import sys
 import zipfile
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+# CLI 실행 시에만 콘솔을 UTF-8 로(한글 출력). 서버 등에서 import 될 때는 stdout 을 건드리지 않음.
+if __name__ == "__main__":
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    except Exception:
+        pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)

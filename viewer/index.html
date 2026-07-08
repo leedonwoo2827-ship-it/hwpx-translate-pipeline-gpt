@@ -63,6 +63,14 @@
 
 <!-- 첫 페이지: 교정 현황(목차) -->
 <main id="view-list">
+  <!-- 새 원고(PDF) 첨부 → 워크스페이스 생성 -->
+  <div class="ws-new">
+    <b>새 원고(PDF) → 워크스페이스</b>
+    <input id="ws-title" placeholder="책 제목 입력">
+    <div id="ws-drop" class="ws-drop">여기에 PDF를 드래그하거나 클릭해 선택</div>
+    <input id="ws-file" type="file" accept="application/pdf" hidden>
+    <span id="ws-msg" class="hint"></span>
+  </div>
   <div class="list-wrap">
     <h2 class="list-title">교정 현황 · <span id="list-book"></span> <span class="hint">(장을 클릭하면 편집 화면으로)</span></h2>
     <table class="idx">

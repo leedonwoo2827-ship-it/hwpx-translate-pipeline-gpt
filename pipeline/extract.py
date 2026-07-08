@@ -17,7 +17,12 @@ import os
 import re
 import sys
 
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+# CLI 실행 시에만 콘솔을 UTF-8 로(한글 출력). 서버 등에서 import 될 때는 stdout 을 건드리지 않음.
+if __name__ == "__main__":
+    try:
+        sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8")
+    except Exception:
+        pass
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, HERE)
@@ -244,6 +249,23 @@ def _slugify(text: str) -> str:
     return s[:40] or "doc"
 
 
+def extract_whole(pdf_path: str, book: str | None = None, run: str | None = None):
+    """PDF 전체를 한 개 장으로 추출해 워크스페이스(런)를 만든다. (run_dir, cid) 반환.
+    CLI(--whole)와 뷰어(POST /api/workspace)가 공용으로 사용."""
+    run_dir = paths.resolve_run(run, create=True, book=book)
+    out_root = paths.stage(run_dir, paths.EXTRACT)
+    os.makedirs(out_root, exist_ok=True)
+    doc = fitz.open(pdf_path)
+    try:
+        n = doc.page_count
+        title = book or os.path.splitext(os.path.basename(pdf_path))[0]
+        cid = f"001-{n:03d}-00-{_slugify(title)}"
+        extract_chapter(cid, {"title": title, "author": "", "pages": (1, n)}, doc, out_root)
+    finally:
+        doc.close()
+    return run_dir, cid
+
+
 def main():
     argv = sys.argv[1:]
     run = None
@@ -268,21 +290,19 @@ def main():
             print("  · 이 책(192p) 전용 장 추출: python run.py extract <chapter-id>")
             print(f"    사용 가능한 chapter-id: {list(CHAPTERS)}")
         raise SystemExit(1)
+
+    # --whole: PDF 전체를 한 장으로 추출(임의 책의 워크스페이스 시작점). 장 분할은 이후 단계.
+    if whole:
+        run_dir, cid = extract_whole(pdf, book=book, run=run)
+        print(f"[whole] → 1개 장({cid}) 추출 완료. run={os.path.basename(run_dir)}. 뷰어에서 확인하세요.")
+        return
+
     # extract 는 기본적으로 새 런 생성(--run 지정 시 해당 런에 추가)
     run_dir = paths.resolve_run(run, create=True, book=book)
     out_root = paths.stage(run_dir, paths.EXTRACT)
     os.makedirs(out_root, exist_ok=True)
     print(f"[run] {os.path.basename(run_dir)} (book={os.path.basename(os.path.dirname(run_dir))})")
     doc = fitz.open(pdf)
-
-    # --whole: PDF 전체를 한 장으로 추출(임의 책의 워크스페이스 시작점). 장 분할은 이후 단계.
-    if whole:
-        n = doc.page_count
-        title = book or os.path.splitext(os.path.basename(pdf))[0]
-        cid = f"001-{n:03d}-00-{_slugify(title)}"
-        extract_chapter(cid, {"title": title, "author": "", "pages": (1, n)}, doc, out_root)
-        print(f"[whole] '{title}' {n}쪽 → 1개 장({cid}) 추출 완료. 뷰어에서 확인하세요.")
-        return
 
     targets = argv or list(CHAPTERS.keys())
     for cid in targets:

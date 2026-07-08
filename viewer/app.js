@@ -139,6 +139,27 @@ async function build() {
   const j = await r.json(); setStatus(j.ok ? ("빌드 완료: " + j.hwpx) : ("빌드 실패: " + j.error));
 }
 
+// ---- 새 원고(PDF) → 워크스페이스 생성 (첫 화면 드롭존) ----
+async function createWorkspace(file) {
+  const title = ($("ws-title").value || "").trim();
+  if (!title) { $("ws-msg").textContent = "책 제목을 먼저 입력하세요."; return; }
+  if (!file) { $("ws-msg").textContent = "PDF 파일을 선택/드롭하세요."; return; }
+  $("ws-msg").textContent = `업로드·추출 중… (${file.name})`;
+  try {
+    const buf = await file.arrayBuffer();
+    const r = await fetch("/api/workspace?title=" + encodeURIComponent(title),
+      { method: "POST", headers: { "Content-Type": "application/pdf" }, body: buf });
+    const j = await r.json();
+    if (!j.ok) { $("ws-msg").textContent = "실패: " + (j.error || ""); return; }
+    $("ws-msg").textContent = `생성됨: ${j.book}`;
+    await loadBooks();
+    activeBook = j.book;
+    const bs = $("book");
+    if ([...bs.options].some((o) => o.value === j.book)) bs.value = j.book;
+    await loadRuns(); showList();
+  } catch (e) { $("ws-msg").textContent = "실패: " + e; }
+}
+
 // ---- LLM(codex) 연결 상태 + GPT 번역/윤문 ----
 async function refreshLlmChip() {
   const chip = $("llm-chip");
@@ -213,6 +234,15 @@ async function runLlm(kind) {
   } catch (e) { setStatus(`GPT ${label} 실패: ${e}`); }
   finally { bt.disabled = br.disabled = false; }
 }
+
+$("ws-drop").addEventListener("click", () => $("ws-file").click());
+$("ws-file").addEventListener("change", (e) => { if (e.target.files[0]) createWorkspace(e.target.files[0]); });
+$("ws-drop").addEventListener("dragover", (e) => { e.preventDefault(); $("ws-drop").classList.add("over"); });
+$("ws-drop").addEventListener("dragleave", () => $("ws-drop").classList.remove("over"));
+$("ws-drop").addEventListener("drop", (e) => {
+  e.preventDefault(); $("ws-drop").classList.remove("over");
+  const f = e.dataTransfer.files[0]; if (f) createWorkspace(f);
+});
 
 $("llm-settings").addEventListener("click", openLlm);
 $("llm-close").addEventListener("click", closeLlm);
