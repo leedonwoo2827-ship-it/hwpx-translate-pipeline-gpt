@@ -302,23 +302,29 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, {"ok": True, "run": n})
 
         if path.startswith("/api/build/"):
+            # hwpx 만 생성(한글에서 열어 확인용). PDF 는 별도 [PDF 빌드](/api/pdf) 단계로.
             cid = path[len("/api/build/"):]
             _save_reviewed(run_dir, cid, data.get("ko", ""))
             try:
                 import build
-                # include_cover=False: 회사양식 표지(1페이지) 제외하고 본문만 빌드.
-                out = build.build(cid, run=run_dir, include_cover=False)
+                out = build.build(cid, run=run_dir)  # include_cover 기본(True): 유효한 hwpx
+                return self._send(200, {"ok": True, "hwpx": out})
             except Exception as e:  # noqa: BLE001
                 return self._send(200, {"ok": False, "error": str(e)})
-            # hwpx → PDF (한컴, Windows). 실패해도 hwpx 는 성공으로 반환.
-            pdf, pdf_error = None, None
+
+        if path.startswith("/api/pdf/"):
+            # 이미 빌드된 hwpx → 한컴으로 PDF. 성공 시 폴더 열기.
+            cid = path[len("/api/pdf/"):]
+            hwpx_path = paths.stage(run_dir, paths.HWPX, f"{cid}.hwpx")
+            if not os.path.exists(hwpx_path):
+                return self._send(200, {"ok": False, "error": "먼저 [hwpx 빌드]를 하세요."})
             try:
                 import hancom_pdf
-                pdf = hancom_pdf.to_pdf(out)
-                _open_folder(os.path.dirname(pdf))  # PDF 성공 시 그 폴더 열기
+                pdf = hancom_pdf.to_pdf(hwpx_path)
+                _open_folder(os.path.dirname(pdf))
+                return self._send(200, {"ok": True, "pdf": pdf})
             except Exception as e:  # noqa: BLE001
-                pdf_error = str(e)
-            return self._send(200, {"ok": True, "hwpx": out, "pdf": pdf, "pdf_error": pdf_error})
+                return self._send(200, {"ok": False, "error": str(e)})
 
         # ── LLM(codex) 관리 ──
         if path == "/api/llm/model":

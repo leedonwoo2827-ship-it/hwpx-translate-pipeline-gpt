@@ -98,6 +98,7 @@ async function loadChapter(cid) {
   const d = await (await fetch("/api/chapter/" + encodeURIComponent(cid) + qy({ run: activeRun }))).json();
   enText = d.en || ""; $("ko").value = d.latest || ""; $("ko-mode").textContent = d.src;
   $("ed-cid").textContent = cid;
+  $("pdf-build").classList.add("hidden");   // 새 장 = hwpx 빌드 전이므로 PDF 버튼 숨김
   await loadLeft(); showEdit(); renderKoPreview();
   setStatus(`${cid} · 편집=${activeRun}(${d.src})`);
 }
@@ -138,10 +139,20 @@ async function build() {
   const r = await fetch("/api/build/" + encodeURIComponent(currentCid) + qy({ run: activeRun }), { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ko: $("ko").value }) });
   const j = await r.json();
   if (!j.ok) { setStatus("빌드 실패: " + j.error); return; }
-  let msg = "hwpx 빌드 완료";
-  if (j.pdf) msg += " + PDF 생성됨";
-  else if (j.pdf_error) msg += " (PDF 생략: 한컴 필요/오류)";
-  setStatus(msg + " → " + j.hwpx);
+  setStatus("hwpx 빌드 완료 → " + j.hwpx + "  (한글에서 확인 후 [PDF 빌드])");
+  $("pdf-build").classList.remove("hidden");   // hwpx 생기면 PDF 빌드 버튼 노출
+}
+async function pdfBuild() {
+  if (!currentCid) return;
+  const b = $("pdf-build"); b.disabled = true;
+  setStatus("PDF 변환 중… (한컴)");
+  try {
+    const r = await fetch("/api/pdf/" + encodeURIComponent(currentCid) + qy({ run: activeRun }),
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const j = await r.json();
+    setStatus(j.ok ? ("PDF 생성됨 → " + j.pdf + "  (폴더 열림)") : ("PDF 실패: " + j.error));
+  } catch (e) { setStatus("PDF 실패: " + e); }
+  finally { b.disabled = false; }
 }
 
 // ---- 새 원고(PDF) → 워크스페이스 생성 (첫 화면 드롭존) ----
@@ -265,6 +276,7 @@ $("run").addEventListener("change", async (e) => { activeRun = e.target.value; i
 $("left-src").addEventListener("change", async () => { await loadLeft(); if (!$("ko-diff").classList.contains("hidden")) renderDiff(); });
 $("save").addEventListener("click", save);
 $("build").addEventListener("click", build);
+$("pdf-build").addEventListener("click", pdfBuild);
 $("preview-toggle").addEventListener("click", togglePreview);
 $("diff-toggle").addEventListener("click", toggleDiff);
 $("ko").addEventListener("input", () => setStatus("편집 중…"));
