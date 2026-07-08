@@ -4,7 +4,9 @@
 대부분 명령은 --run <런폴더> 지원(생략 시 최신 런). 스테이지 독립: md 파일부터 시작 가능.
 
     python run.py extract [chapter-id ...] [--run <런>]  # PDF → 01-extract (새 런 생성)
-    python run.py viewer [--run <런>]                     # 리뷰 뷰어(초벌 vs 교정본 diff)
+    python run.py translate <chapter-id> [--run] [--model]  # 01 EN → 02-translate (ChatGPT/codex)
+    python run.py refine <chapter-id> [--run] [--model]     # EN+02 → 03-refine (ChatGPT/codex)
+    python run.py viewer [--run <런>]                     # 리뷰 뷰어(연결상태·번역·초벌 vs 교정본 diff)
     python run.py build <chapter-id> [--run <런>]         # 04-review→03-refine→02 중 첫 md → 05-hwpx
     python run.py merge [--run <런>]                       # 05-hwpx/*.pdf → 06-book
     python run.py pdf-batch [--run <런>]                   # 한컴으로 05-hwpx 전체 → PDF
@@ -12,8 +14,9 @@
     python run.py template                                # 회사양식 → 양식 정본(스타일·서체 보정)
     python run.py setup-fonts                             # KoPub World 설치
 
-번역(02)·교정(03)은 현재 Claude/사람이 집필. 추후 로컬 LLM으로 03-refine 자동화
-(인터페이스: EN md + 02 KO md → 03 KO md).
+번역(02)·교정(03)은 OpenAI Codex CLI(`codex`, ChatGPT OAuth 할당량)로 자동화한다(API 키 불필요).
+최초 1회 `codex login` 필요. 시스템 프롬프트 = skills/translate-ko·refine-ko/SKILL.md.
+뷰어(GUI)에서 장별 [GPT 번역]/[GPT 윤문] 버튼으로도 실행할 수 있다.
 """
 import os
 import runpy
@@ -36,6 +39,10 @@ def main():
     elif cmd == "build":
         sys.argv = [os.path.join(PIPE, "build.py")] + rest
         runpy.run_path(os.path.join(PIPE, "build.py"), run_name="__main__")
+    elif cmd in ("translate", "refine"):
+        args = rest + (["--refine"] if cmd == "refine" else [])
+        sys.argv = [os.path.join(PIPE, "translate.py")] + args
+        runpy.run_path(os.path.join(PIPE, "translate.py"), run_name="__main__")
     elif cmd == "template":
         runpy.run_path(os.path.join(PIPE, "make_template.py"), run_name="__main__")
     elif cmd == "pdf":

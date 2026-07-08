@@ -8,7 +8,12 @@
 </head>
 <body>
 <header>
-  <h1>UNIVERSITIES AFTER AI · 번역 리뷰</h1>
+  <div class="htop">
+    <h1>UNIVERSITIES AFTER AI · 번역 리뷰</h1>
+    <span class="spacer"></span>
+    <span id="llm-chip" class="chip" title="LLM 연결 상태">● 확인 중…</span>
+    <button id="llm-settings" class="btn ghost sm">⚙ 연결 상태</button>
+  </div>
   <div class="toolbar">
     <button id="nav-list" class="btn hidden">← 목록</button>
     <label class="vlbl">책</label>
@@ -18,6 +23,8 @@
     <span id="status" class="status"></span>
     <span class="spacer"></span>
     <span id="editor-tools" class="hidden">
+      <button id="gpt-translate" class="btn" title="영문 → 한국어 완역(02)">GPT 번역(02)</button>
+      <button id="gpt-refine" class="btn" title="초벌 → 자연스러운 윤문(03)">GPT 윤문(03)</button>
       <button id="diff-toggle" class="btn">대비 보기</button>
       <button id="preview-toggle" class="btn">프리뷰</button>
       <button id="save" class="btn">교지 저장</button>
@@ -25,6 +32,34 @@
     </span>
   </div>
 </header>
+
+<!-- LLM 연결 상태 모달 -->
+<div id="llm-overlay" class="overlay hidden">
+  <div class="modal">
+    <h3>⚙ LLM 연결 상태</h3>
+    <p class="muted">API 키가 필요 없습니다. OpenAI Codex CLI(<span class="mono">codex</span>)에 ChatGPT 계정으로
+      로그인하면 그 계정 할당량으로 모델을 사용합니다.</p>
+    <div id="llm-conn" class="conn">확인 중…</div>
+    <div class="field">
+      <label>사용 모델</label>
+      <div class="row">
+        <select id="llm-model" class="vsel"></select>
+        <button id="llm-apply" class="btn primary">적용</button>
+        <span class="hint">현재 적용: <span id="llm-cur-model">-</span></span>
+      </div>
+      <div id="llm-model-msg" class="hint"></div>
+    </div>
+    <p class="muted sm">모델이 세밀할수록(gpt-5.5) 품질이 높지만 할당량을 더 씁니다.
+      대량 생성에는 상위 구독(ChatGPT Plus/Pro) 권장.</p>
+    <div class="row">
+      <button id="llm-login" class="btn">🖥️ 로그인 관리(codex login)</button>
+      <button id="llm-logout" class="btn">로그아웃</button>
+      <button id="llm-refresh" class="btn">새로고침</button>
+      <span class="spacer"></span>
+      <button id="llm-close" class="btn">닫기</button>
+    </div>
+  </div>
+</div>
 
 <!-- 첫 페이지: 교정 현황(목차) -->
 <main id="view-list">

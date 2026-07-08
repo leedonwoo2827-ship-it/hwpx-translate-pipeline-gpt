@@ -139,6 +139,91 @@ async function build() {
   const j = await r.json(); setStatus(j.ok ? ("빌드 완료: " + j.hwpx) : ("빌드 실패: " + j.error));
 }
 
+// ---- LLM(codex) 연결 상태 + GPT 번역/윤문 ----
+async function refreshLlmChip() {
+  const chip = $("llm-chip");
+  try {
+    const s = await (await fetch("/api/llm/status")).json();
+    if (s.installed && s.authenticated) {
+      chip.textContent = `● ${s.label} · ${s.selected_model || "codex 자동"}`;
+      chip.className = "chip ok"; chip.title = `연결됨 — 계정: ${s.email || "?"}`;
+    } else if (!s.installed) {
+      chip.textContent = "● codex 미설치"; chip.className = "chip bad"; chip.title = "codex CLI 설치 필요";
+    } else {
+      chip.textContent = "● 미로그인"; chip.className = "chip bad"; chip.title = "codex login 필요";
+    }
+    return s;
+  } catch { chip.textContent = "● 상태 불명"; chip.className = "chip bad"; return null; }
+}
+async function openLlm() {
+  $("llm-overlay").classList.remove("hidden");
+  const s = await refreshLlmChip();
+  const conn = $("llm-conn");
+  if (s && s.installed && s.authenticated) {
+    conn.innerHTML = `✓ 연결됨 (${esc(s.label)}) — 계정: <b>${esc(s.email || "?")}</b>`; conn.className = "conn ok";
+  } else if (s && !s.installed) {
+    conn.innerHTML = "codex CLI가 설치되어 있지 않습니다. Node.js 설치 후 <code>npm i -g @openai/codex</code>."; conn.className = "conn bad";
+  } else {
+    conn.innerHTML = "로그인이 필요합니다. 아래 <b>로그인 관리</b>를 눌러 <code>codex login</code>을 실행하세요."; conn.className = "conn bad";
+  }
+  await loadModels(false);
+}
+function closeLlm() { $("llm-overlay").classList.add("hidden"); }
+async function loadModels(force) {
+  const d = await (await fetch("/api/llm/models" + (force ? "?force=1" : ""))).json();
+  const sel = $("llm-model"); sel.innerHTML = "";
+  const def = document.createElement("option"); def.value = ""; def.textContent = "기본값 (codex 자동 선택)"; sel.appendChild(def);
+  (d.models || []).forEach((m) => { const o = document.createElement("option"); o.value = m; o.textContent = m; sel.appendChild(o); });
+  sel.value = d.selected || "";
+  $("llm-cur-model").textContent = d.selected || "기본값(codex 자동)";
+}
+async function applyModel() {
+  const m = $("llm-model").value;
+  const d = await (await fetch("/api/llm/model", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ model: m }) })).json();
+  $("llm-model-msg").textContent = d.ok ? "적용되었습니다." : "적용 실패";
+  $("llm-cur-model").textContent = d.selected || "기본값(codex 자동)";
+  refreshLlmChip();
+}
+async function llmLogin() {
+  const d = await (await fetch("/api/llm/login", { method: "POST" })).json();
+  $("llm-model-msg").textContent = d.hint || "";
+}
+async function llmLogout() { await fetch("/api/llm/logout", { method: "POST" }); await openLlm(); }
+
+function handleLlmError(j, label) {
+  setStatus(`GPT ${label} 실패: ${j.error || j.kind || ""}`);
+  if (j.kind === "not_installed" || j.kind === "not_authenticated") openLlm();
+  else alert(`GPT ${label} 실패:\n${j.error || j.kind}`);
+}
+async function runLlm(kind) {
+  if (!currentCid) return;
+  const label = kind === "refine" ? "윤문(03)" : "번역(02)";
+  const bt = $("gpt-translate"), br = $("gpt-refine");
+  bt.disabled = br.disabled = true;
+  setStatus(`GPT ${label} 중… (장 하나에 수 분 걸릴 수 있습니다)`);
+  try {
+    const ep = kind === "refine" ? "refine" : "translate";
+    const r = await fetch(`/api/${ep}/` + encodeURIComponent(currentCid) + qy({ run: activeRun }),
+      { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
+    const j = await r.json();
+    if (j.ok) {
+      $("ko").value = j.ko; $("ko-mode").textContent = j.stage; showEdit(); renderKoPreview();
+      setStatus(`GPT ${label} 완료 → 검토 후 [교지 저장]/[hwpx 빌드]`);
+    } else handleLlmError(j, label);
+  } catch (e) { setStatus(`GPT ${label} 실패: ${e}`); }
+  finally { bt.disabled = br.disabled = false; }
+}
+
+$("llm-settings").addEventListener("click", openLlm);
+$("llm-close").addEventListener("click", closeLlm);
+$("llm-refresh").addEventListener("click", () => loadModels(true).then(refreshLlmChip));
+$("llm-apply").addEventListener("click", applyModel);
+$("llm-login").addEventListener("click", llmLogin);
+$("llm-logout").addEventListener("click", llmLogout);
+$("llm-overlay").addEventListener("click", (e) => { if (e.target === $("llm-overlay")) closeLlm(); });
+$("gpt-translate").addEventListener("click", () => runLlm("translate"));
+$("gpt-refine").addEventListener("click", () => runLlm("refine"));
+
 $("book").addEventListener("change", async (e) => { activeBook = e.target.value; await loadRuns(); showList(); });
 $("nav-list").addEventListener("click", showList);
 $("run").addEventListener("change", async (e) => { activeRun = e.target.value; if ($("view-editor").classList.contains("hidden")) renderIndex(); else loadChapter(currentCid); });
@@ -149,4 +234,4 @@ $("preview-toggle").addEventListener("click", togglePreview);
 $("diff-toggle").addEventListener("click", toggleDiff);
 $("ko").addEventListener("input", () => setStatus("편집 중…"));
 
-(async () => { await loadBooks(); await loadRuns(); showList(); })();
+(async () => { await loadBooks(); await loadRuns(); showList(); refreshLlmChip(); })();

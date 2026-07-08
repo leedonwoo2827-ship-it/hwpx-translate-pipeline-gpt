@@ -10,6 +10,8 @@ from __future__ import annotations
 
 import json
 import os
+import platform
+import subprocess
 import sys
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -18,6 +20,11 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.dirname(HERE)
 sys.path.insert(0, os.path.join(ROOT, "pipeline"))
 import paths  # noqa: E402
+import translate  # noqa: E402  (LLM 자동 번역/윤문)
+from llm import codex_auth, codex_runner  # noqa: E402
+from llm.errors import (  # noqa: E402
+    LLMNotInstalled, LLMNotAuthenticated, LLMQuotaExceeded, LLMError,
+)
 
 PORT = 8770
 _ARG_RUN = None
@@ -103,6 +110,53 @@ def _save_reviewed(run_dir, cid, text):
     return os.path.basename(run_dir)
 
 
+# ── LLM(codex) 연동 ──────────────────────────────────────────────────────────
+def _llm_status():
+    """연결 상태 + 선택 모델 병합(UI 칩/패널용)."""
+    s = codex_auth.status()
+    s["selected_model"] = codex_runner.get_model()
+    return s
+
+
+_ERR_KIND = {
+    LLMNotInstalled: "not_installed",
+    LLMNotAuthenticated: "not_authenticated",
+    LLMQuotaExceeded: "quota",
+}
+
+
+def _llm_error_kind(e: Exception) -> str:
+    for cls, kind in _ERR_KIND.items():
+        if isinstance(e, cls):
+            return kind
+    return "error"
+
+
+def _launch_terminal(cmd: list[str]) -> bool:
+    """새 OS 터미널에서 명령 실행(브라우저 OAuth 로그인용). 성공하면 True."""
+    try:
+        sysname = platform.system()
+        if sysname == "Windows":
+            # start "" cmd /k "<codex> login"  — 새 콘솔 창에서 실행 후 창 유지.
+            quoted = " ".join(f'"{c}"' if " " in c else c for c in cmd)
+            subprocess.Popen(f'start "codex login" cmd /k {quoted}', shell=True)
+            return True
+        if sysname == "Darwin":
+            script = 'tell application "Terminal" to do script "%s"' % " ".join(cmd)
+            subprocess.Popen(["osascript", "-e", script])
+            return True
+        # Linux: 흔한 터미널 에뮬레이터 순차 시도.
+        for term in ("x-terminal-emulator", "gnome-terminal", "konsole", "xterm"):
+            try:
+                subprocess.Popen([term, "-e", *cmd])
+                return True
+            except FileNotFoundError:
+                continue
+        return False
+    except Exception:
+        return False
+
+
 class Handler(BaseHTTPRequestHandler):
     def _send(self, code, body, ctype="application/json; charset=utf-8"):
         if isinstance(body, (dict, list)):
@@ -133,6 +187,12 @@ class Handler(BaseHTTPRequestHandler):
             return self._send(200, _read(os.path.join(HERE, "app.js")), "application/javascript; charset=utf-8")
         if path == "/style.css":
             return self._send(200, _read(os.path.join(HERE, "style.css")), "text/css; charset=utf-8")
+        if path == "/api/llm/status":
+            return self._send(200, _llm_status())
+        if path == "/api/llm/models":
+            force = q.get("force", ["0"])[0] in ("1", "true")
+            return self._send(200, {"models": codex_runner.list_models(force=force),
+                                    "selected": codex_runner.get_model()})
         if path == "/api/books":
             return self._send(200, {"books": paths.books(), "active": _book(book)})
         if path == "/api/runs":
@@ -185,6 +245,34 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": True, "hwpx": out})
             except Exception as e:  # noqa: BLE001
                 return self._send(200, {"ok": False, "error": str(e)})
+
+        # ── LLM(codex) 관리 ──
+        if path == "/api/llm/model":
+            codex_runner.set_model(data.get("model", ""))
+            return self._send(200, {"ok": True, "selected": codex_runner.get_model()})
+        if path == "/api/llm/login":
+            ok = _launch_terminal(codex_auth.login_terminal_cmd())
+            return self._send(200, {"ok": ok,
+                                    "hint": "새 터미널 창에서 codex 로그인(브라우저)이 진행됩니다. "
+                                            "완료 후 '새로고침'을 누르세요." if ok else
+                                            "터미널을 열 수 없습니다. 수동으로 `codex login` 을 실행하세요."})
+        if path == "/api/llm/logout":
+            return self._send(200, {"ok": codex_auth.logout()})
+
+        # ── GPT 자동 번역/윤문 (장 단위, 수 분 소요 가능) ──
+        if path.startswith("/api/translate/") or path.startswith("/api/refine/"):
+            is_refine = path.startswith("/api/refine/")
+            cid = path[len("/api/refine/" if is_refine else "/api/translate/"):]
+            model = data.get("model") or None
+            try:
+                fn = translate.refine_chapter if is_refine else translate.translate_chapter
+                ko = fn(cid, run=run_dir, model=model)
+                stage = paths.REFINE if is_refine else paths.TRANSLATE
+                return self._send(200, {"ok": True, "ko": ko, "stage": stage})
+            except LLMError as e:
+                return self._send(200, {"ok": False, "kind": _llm_error_kind(e), "error": str(e)})
+            except Exception as e:  # noqa: BLE001
+                return self._send(200, {"ok": False, "kind": "error", "error": str(e)})
 
         return self._send(404, {"error": "not found"})
 

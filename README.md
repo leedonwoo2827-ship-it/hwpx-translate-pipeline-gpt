@@ -12,9 +12,9 @@ _asstest/UNIVERSITIES AFTER AI.pdf   원문(읽기 전용)
         │  python run.py extract
         ▼
 output/01-extract/<장>/   content.en.md  +  figures/*.png  +  meta.json
-        │  번역·분석 집필 (현재: Claude / 추후: 로컬 LLM)
+        │  번역·분석 (GPT: OpenAI Codex CLI, ChatGPT OAuth 할당량 — API 키 불필요)
         ▼
-output/02-translate/<장>/ content.ko.md          ← 사람이 편집하는 원본
+output/02-translate/<장>/ content.ko.md          ← GPT 완역, 사람이 편집
         │  python run.py viewer  →  좌 영문 / 우 한국어 편집 + 프리뷰 + 도표
         ▼
 output/03-review/<장>/    content.reviewed.md    ← 사람이 확정
@@ -57,11 +57,18 @@ run.bat          # Windows
 
 ```bash
 python run.py extract                                     # PDF → 01-extract (새 런 생성)
-python run.py viewer                                      # 리뷰 뷰어(책·교지 선택, 초벌 vs 교정본 diff)
+python run.py translate <chapter-id> [--run] [--model]    # 01 EN → 02-translate (GPT/codex 완역)
+python run.py refine    <chapter-id> [--run] [--model]    # EN+02 → 03-refine (GPT/codex 윤문)
+python run.py viewer                                      # 리뷰 뷰어(연결상태·GPT 번역·초벌 vs 교정본 diff)
 python run.py build <chapter-id> [--run <런>] [--book <책>]  # 04→03→02 첫 md → 05-hwpx
 python run.py merge [--run <런>] [--book <책>]              # 05-hwpx/*.pdf → 06-book (PyMuPDF)
 python run.py pdf-batch                                   # 05-hwpx/*.hwpx → PDF (한컴, Windows 전용)
 ```
+
+> **GPT 번역/윤문 전제**: Node.js + `npm i -g @openai/codex` 설치 후 1회 `codex login`(ChatGPT OAuth).
+> API 키가 필요 없으며 개인 ChatGPT 구독 할당량으로 `gpt-5.5/5.4/5.4-mini` 를 쓴다.
+> 뷰어의 **⚙ 연결 상태**에서 로그인·모델선택, 편집 화면의 **[GPT 번역]/[GPT 윤문]** 버튼으로 실행.
+> 자세히: [docs/llm-codex.md](docs/llm-codex.md).
 
 > **크로스플랫폼 주의**: hwpx→PDF 변환(`pdf`/`pdf-batch`)은 한컴오피스 자동화(win32com) 기반이라 **Windows 전용**입니다. macOS/Linux 에서는 `build`(lxml)·`viewer`·`merge`(PyMuPDF) 가 모두 동작하며, hwpx 를 한컴/뷰어에서 직접 PDF로 내보낸 뒤 `merge` 로 한 권 병합하세요.
 
@@ -84,18 +91,21 @@ output/<책명>/<YYMMDDHHMM-라벨=교지>/
 
 ## 상태 / 로드맵
 
-- **현재**: 번역·분석을 이 세션의 Claude가 집필(이 저장소는 Claude에 의존).
-- **추후**: 02-translate 단계를 **경량 로컬 LLM 모델**로 대체해 완전 자기완결화 후 GitHub 공개.
+- **현재**: 번역(02)·윤문(03)을 **OpenAI Codex CLI(`codex`, ChatGPT OAuth 할당량)** 로 자동화.
+  API 키·외부 SDK 없이 개인 ChatGPT 구독으로 `gpt-5.5/5.4/5.4-mini` 사용. Claude 비의존.
+- **선택 확장**: 목록 화면 행별 빠른 번역 버튼, `##` 소제목 단위 청킹(긴 장 출력 잘림 대비).
 - **선택 확장**: 포팅한 hwpx 모듈을 FastMCP 로 감싸 Claude Desktop 플러그인(MCP)화.
 
 ## 구조
 
 ```
-pipeline/  paths.py  extract.py  build.py  merge_pdf.py  make_template.py
+pipeline/  paths.py  extract.py  translate.py  build.py  merge_pdf.py  make_template.py
            setup_fonts.py  hancom_pdf.py  hancom_pdf_batch.py
            hwpx/{hwpx_gen,mdblocks,md_gen,images}.py   ← 포팅 + 신규
-viewer/    server.py  index.html  app.js  style.css     ← 프레임워크 無
-skills/    refine-ko/  translate-ko/  README.md         ← 교정·번역 프롬프트 계약
+           llm/{codex_auth,codex_runner,errors}.py     ← codex(ChatGPT OAuth) 연동
+viewer/    server.py  index.html  app.js  style.css     ← 프레임워크 無(연결상태·GPT 번역 UI 포함)
+skills/    refine-ko/  translate-ko/  README.md         ← 교정·번역 프롬프트 계약(=시스템 프롬프트)
+docs/      llm-codex.md                                 ← GPT 로그인·모델·문제해결
 assets/    hwpx_template.hwpx (양식 정본)  hwpx_template.base.hwpx (원본)
 setup.bat run.bat  setup.sh run.sh                      ← Windows / macOS·Linux
 output/    <책명>/<교지>/{01-extract 02-translate 03-refine 04-review 05-hwpx 06-book}

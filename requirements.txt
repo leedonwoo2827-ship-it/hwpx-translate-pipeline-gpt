@@ -6,3 +6,9 @@ Pillow>=10.0       # 도표 PNG 크기 측정
 
 # 선택: 한컴 OLE 검증 경로(Windows + 한컴오피스). 미설치여도 lxml 경로로 동작.
 pywin32>=306 ; platform_system == "Windows"
+
+# LLM 번역/윤문(02·03) = OpenAI Codex CLI(codex) via subprocess. **API 키/파이썬 SDK 불필요.**
+# 별도 pip 의존성 없음(표준 라이브러리만). 대신 런타임 전제:
+#   1) Node.js 설치 후:  npm i -g @openai/codex
+#   2) 최초 1회 ChatGPT OAuth 로그인:  codex login
+# 자세한 내용: docs/llm-codex.md
