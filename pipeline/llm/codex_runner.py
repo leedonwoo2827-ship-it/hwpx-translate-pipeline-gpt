@@ -158,6 +158,12 @@ def _classify_error(stdout: str, stderr: str, rc: int) -> LLMError:
         return CodexNotAuthenticated(
             "codex 에 ChatGPT 로그인이 필요합니다. 터미널에서 `codex login` 을 실행해 로그인하세요."
         )
+    if any(k in blob for k in ("out of credits", "refill", "insufficient_quota", "billing",
+                               "credit")):
+        return CodexQuotaExceeded(
+            "OpenAI 워크스페이스 크레딧이 소진되었습니다. 계정 소유자가 크레딧을 충전(refill)해야 "
+            "다시 사용할 수 있습니다. (모델을 바꿔도 동일 — 크레딧 문제입니다.)"
+        )
     if any(k in blob for k in ("quota", "rate limit", "429", "too many requests",
                                "usage limit", "exceeded")):
         return CodexQuotaExceeded(
