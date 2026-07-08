@@ -95,6 +95,23 @@ def _chapter_data(run_dir, cid):
     }
 
 
+_STAGE_LABEL = {
+    paths.REVIEW: "검토본(04)",
+    paths.REFINE: "윤문(03)",
+    paths.TRANSLATE: "초벌(02)",
+}
+
+
+def _stage_label(run_dir, cid):
+    """장의 현재 활성 단계를 사람이 읽는 라벨로. 04→03→02 중 첫 존재, 없으면 원문(01) 여부."""
+    _, src = paths.source_md(run_dir, cid)
+    if src:
+        return _STAGE_LABEL.get(src, src)
+    if os.path.exists(paths.stage(run_dir, paths.EXTRACT, cid, "content.en.md")):
+        return "원문(01) · 번역 전"
+    return "-"
+
+
 def _index(run_dir, book=None):
     """첫 화면용 장 목록: id/제목/저자/활성단계 + 이 장을 가진 교지(런) 라벨."""
     rows = []
@@ -104,10 +121,9 @@ def _index(run_dir, book=None):
         mp = paths.stage(run_dir, paths.EXTRACT, cid, "meta.json")
         if os.path.exists(mp):
             meta = json.load(open(mp, encoding="utf-8"))
-        _, src = paths.source_md(run_dir, cid)
         present = [v["label"] for v in vers if _repr_md(v["run"], cid, book)]
         rows.append({"id": cid, "title": meta.get("title", cid),
-                     "author": meta.get("author", ""), "src": src or "-",
+                     "author": meta.get("author", ""), "src": _stage_label(run_dir, cid),
                      "proofs": present})
     return rows
 
