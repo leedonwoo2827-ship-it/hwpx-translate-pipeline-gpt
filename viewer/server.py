@@ -184,6 +184,25 @@ def _launch_terminal(cmd: list[str]) -> bool:
         return False
 
 
+def _drop_first_page(pdf_path: str) -> bool:
+    """PDF 첫 페이지(회사양식 표지) 제거. 2페이지 이상일 때만 수행. 제거 시 True.
+    hwpx 를 손대지 않고(=유효 유지) PDF 단계에서만 표지를 뺀다. PyMuPDF 사용."""
+    try:
+        import fitz
+        doc = fitz.open(pdf_path)
+        if doc.page_count <= 1:
+            doc.close()
+            return False
+        doc.delete_page(0)
+        tmp = pdf_path + ".tmp"
+        doc.save(tmp)
+        doc.close()
+        os.replace(tmp, pdf_path)
+        return True
+    except Exception:
+        return False
+
+
 def _open_folder(folder: str) -> None:
     """탐색기/파인더로 폴더 열기(빌드 후 결과 확인용). 실패해도 무시."""
     try:
@@ -313,7 +332,7 @@ class Handler(BaseHTTPRequestHandler):
                 return self._send(200, {"ok": False, "error": str(e)})
 
         if path.startswith("/api/pdf/"):
-            # 이미 빌드된 hwpx → 한컴으로 PDF. 성공 시 폴더 열기.
+            # 이미 빌드된 hwpx → 한컴으로 PDF → 표지(1페이지) 제거 → 폴더 열기.
             cid = path[len("/api/pdf/"):]
             hwpx_path = paths.stage(run_dir, paths.HWPX, f"{cid}.hwpx")
             if not os.path.exists(hwpx_path):
@@ -321,8 +340,9 @@ class Handler(BaseHTTPRequestHandler):
             try:
                 import hancom_pdf
                 pdf = hancom_pdf.to_pdf(hwpx_path)
+                dropped = _drop_first_page(pdf)  # 회사양식 표지(1p) 제거
                 _open_folder(os.path.dirname(pdf))
-                return self._send(200, {"ok": True, "pdf": pdf})
+                return self._send(200, {"ok": True, "pdf": pdf, "cover_removed": dropped})
             except Exception as e:  # noqa: BLE001
                 return self._send(200, {"ok": False, "error": str(e)})
 

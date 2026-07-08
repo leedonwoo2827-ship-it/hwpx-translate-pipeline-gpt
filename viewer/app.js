@@ -150,7 +150,7 @@ async function pdfBuild() {
     const r = await fetch("/api/pdf/" + encodeURIComponent(currentCid) + qy({ run: activeRun }),
       { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({}) });
     const j = await r.json();
-    setStatus(j.ok ? ("PDF 생성됨 → " + j.pdf + "  (폴더 열림)") : ("PDF 실패: " + j.error));
+    setStatus(j.ok ? ("PDF 생성됨" + (j.cover_removed ? "(표지 제외)" : "") + " → " + j.pdf + "  (폴더 열림)") : ("PDF 실패: " + j.error));
   } catch (e) { setStatus("PDF 실패: " + e); }
   finally { b.disabled = false; }
 }
