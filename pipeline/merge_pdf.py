@@ -38,7 +38,8 @@ def merge(run: str | None = None, drop_cover: bool = True, out_path: str | None 
     if out_path is None:
         out_dir = paths.stage(run_dir, paths.BOOK)
         os.makedirs(out_dir, exist_ok=True)
-        out_path = os.path.join(out_dir, "UNIVERSITIES-AFTER-AI-KO.pdf")
+        book_name = os.path.basename(os.path.dirname(run_dir)) or "translated"
+        out_path = os.path.join(out_dir, f"{book_name}-KO.pdf")
     book.save(out_path)
     book.close()
     print(f"병합 완료: {out_path}")

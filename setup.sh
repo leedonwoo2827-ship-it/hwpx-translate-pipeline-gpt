@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# ==== UNIVERSITIES AFTER AI - initial setup (macOS/Linux) ====
+# ==== 영한 번역기 - initial setup (macOS/Linux) ====
 # Installs Python deps, KoPub World fonts, and bakes the hwpx template.
 set -euo pipefail
 cd "$(dirname "$0")"

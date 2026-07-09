@@ -1,6 +1,6 @@
 @echo off
 chcp 65001 >nul
-REM ==== UNIVERSITIES AFTER AI - initial setup (ASCII) ====
+REM ==== 영한 번역기 - initial setup (ASCII) ====
 REM Installs Python deps, KoPub World fonts, and bakes the hwpx template.
 cd /d "%~dp0"
 

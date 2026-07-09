@@ -1,4 +1,4 @@
-"""UNIVERSITIES AFTER AI — 한국어 변환 파이프라인 CLI (자기완결).
+"""영한 번역기 — 한국어 변환 파이프라인 CLI (자기완결).
 
 출력 구조: output/<YYMMDDHHMM>-<라벨>/{01-extract 02-translate 03-refine 04-review 05-hwpx 06-book}
 대부분 명령은 --run <런폴더> 지원(생략 시 최신 런). 스테이지 독립: md 파일부터 시작 가능.

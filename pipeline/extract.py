@@ -1,6 +1,6 @@
 """Phase 1: PDF → 챕터별 EN 마크다운 + 도표 크롭 PNG.
 
-원문(UNIVERSITIES AFTER AI.pdf)은 페이지마다 풀페이지 JPEG + 텍스트 레이어 구조.
+원문 PDF는 페이지마다 풀페이지 JPEG + 텍스트 레이어 구조를 가정한다.
 - 텍스트: 블록 단위로 추출해 머리글/쪽번호 제거, 하이픈 결합, 문단 재구성.
 - 소제목: Tahoma-Bold(10~13pt) → ## / 챕터 제목: >=14pt → #.
 - 도표: 본문 블록 사이 큰 수직 공백을 검출해 고해상 크롭(캡션 "Figure N:" 연결).
@@ -30,7 +30,7 @@ import paths  # noqa: E402
 import fitz  # PyMuPDF  # noqa: E402
 
 ROOT = os.path.dirname(HERE)
-PDF = os.path.join(ROOT, "_asstest", "UNIVERSITIES AFTER AI.pdf")
+PDF = os.path.join(ROOT, "_asstest", "source.pdf")  # 레거시 기본 PDF(웹은 --pdf/--whole 사용)
 
 # 전체 장 맵 (PDF 1-based 페이지 범위, 포함). 페이지 맵은 탐색으로 확보.
 # id = "시작(3)-끝(3)-장번호(2)-약칭"  예) 052-059-03-knowledge-trapezoid

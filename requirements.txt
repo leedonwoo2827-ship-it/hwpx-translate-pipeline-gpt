@@ -1,4 +1,4 @@
-# UNIVERSITIES AFTER AI — 한국어 변환 파이프라인 (자기완결)
+# 영한 번역기 — 한국어 변환 파이프라인 (자기완결)
 # 런타임 핵심: PDF 추출 + hwpx 생성(lxml) + 이미지
 PyMuPDF>=1.24      # PDF 텍스트 추출 + 도표 크롭/렌더
 lxml>=5.1          # hwpx(OWPML) 파싱·생성

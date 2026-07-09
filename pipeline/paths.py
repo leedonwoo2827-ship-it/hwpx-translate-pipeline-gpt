@@ -3,7 +3,7 @@
     output/<책명>/<YYMMDDHHMM>-<영문라벨>/
         01-extract/ 02-translate/ 03-refine/ 04-review/ 05-hwpx/ 06-book/
 
-- output/<책명>/ : 한 권(예: UNIVERSITIES-AFTER-AI). 여러 책을 나란히 둘 수 있다.
+- output/<책명>/ : 한 권(책/문서). 여러 책을 나란히 둘 수 있다.
 - <책명>/<런>/ : 각 실행 회차(교지). 이름 정렬 = 시간순.
 - output/ 전체는 .gitignore(GitHub 미포함).
 - 명령은 --book <책명> / --run <런폴더>(또는 절대경로) 지원. 생략 시:
@@ -18,7 +18,7 @@ import re
 ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 OUTPUT = os.path.join(ROOT, "output")
 
-DEFAULT_BOOK = "UNIVERSITIES-AFTER-AI"
+DEFAULT_BOOK = "translations"
 
 EXTRACT = "01-extract"
 TRANSLATE = "02-translate"
@@ -74,7 +74,7 @@ def latest_run(book: str | None = None) -> str | None:
     return os.path.join(book_dir(book), rs[-1]) if rs else None
 
 
-def new_run(label: str = "afterai", book: str | None = None) -> str:
+def new_run(label: str = "ko", book: str | None = None) -> str:
     import datetime  # 실제 실행 환경 — datetime 사용 가능
     ts = datetime.datetime.now().strftime("%y%m%d%H%M")  # 연월일시분 (예: 2607081530)
     d = os.path.join(book_dir(book), f"{ts}-{label}")
@@ -92,7 +92,7 @@ def _find_run_across_books(run_name: str) -> str | None:
 
 
 def resolve_run(run: str | None = None, create: bool = False,
-                label: str = "afterai", book: str | None = None) -> str:
+                label: str = "ko", book: str | None = None) -> str:
     """런 디렉터리(절대경로) 반환.
 
     run: 절대경로 → 그대로. 런 이름 → book 안(없으면 다른 책에서 탐색).
